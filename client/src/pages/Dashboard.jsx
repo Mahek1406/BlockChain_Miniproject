@@ -1,0 +1,15 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../services/api.js";
+import StatusBadge from "../components/StatusBadge.jsx";
+import Loading from "../components/Loading.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+
+export default function Dashboard() {
+  const { session } = useAuth(); const [claims, setClaims] = useState([]); const [policies, setPolicies] = useState([]); const [loading, setLoading] = useState(true);
+  useEffect(() => { Promise.all([api.get("/claims"), api.get("/policies")]).then(([c, p]) => { setClaims(c.data.claims); setPolicies(p.data.policies); }).finally(() => setLoading(false)); }, []);
+  if (loading) return <Loading />;
+  const count = status => claims.filter(c => c.status === status).length;
+  const stats = session.user.role === "ADMIN" ? [["Total users", "—", "User directory"], ["Total policies", policies.length, "Across all members"], ["Total claims", claims.length, "All submissions"], ["Pending review", count("PENDING"), "Needs attention"]] : [["Total policies", policies.length, "Your coverage"], ["Active policies", policies.filter(p => p.status === "ACTIVE").length, "Currently covered"], ["Total claims", claims.length, "Your submissions"], ["Approved claims", count("APPROVED"), "Successfully resolved"]];
+  return <section><div className="page-intro"><div><p className="eyebrow accent">OVERVIEW</p><h2>{session.user.role === "ADMIN" ? "Good morning, administrator." : "Your insurance overview."}</h2></div><Link to={session.user.role === "ADMIN" ? "/admin/policies/new" : "/claims/new"} className="btn btn-primary">{session.user.role === "ADMIN" ? "Create policy" : "Submit a claim"} <span>→</span></Link></div><div className="stats-grid">{stats.map(([title, value, caption]) => <div className="stat-card" key={title}><p>{title}</p><strong>{value}</strong><small>{caption}</small></div>)}</div><div className="content-grid"><div className="panel"><div className="panel-heading"><div><p className="eyebrow">RECENT ACTIVITY</p><h3>Latest claims</h3></div><Link to="/claims">View all →</Link></div>{claims.length === 0 ? <p className="muted empty">No claims yet. Your submissions will appear here.</p> : <div className="table-responsive"><table><thead><tr><th>Claim ID</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>{claims.slice(0, 5).map(c => <tr key={c._id}><td><b>{c.claimId}</b></td><td>{c.claimType}</td><td>₹{Number(c.amount).toLocaleString("en-IN")}</td><td><StatusBadge status={c.status} /></td></tr>)}</tbody></table></div>}</div><div className="panel"><div className="panel-heading"><div><p className="eyebrow">POLICY PORTFOLIO</p><h3>{policies.length ? "Latest policies" : "No policies yet"}</h3></div><Link to="/policies">View all →</Link></div>{policies.slice(0, 3).map(policy => <div className="dashboard-policy" key={policy._id}><strong>{policy.policyType}</strong><span>{policy.policyNumber || policy.policyId}</span><StatusBadge status={policy.status} /></div>)}{!policies.length && <p className="muted">Policies assigned to this account will appear here.</p>}</div></div></section>;
+}

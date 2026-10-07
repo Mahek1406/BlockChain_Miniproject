@@ -1,0 +1,23 @@
+{
+  "name": "insurance-blockchain",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Academic blockchain-based insurance claim management system",
+  "workspaces": [
+    "client",
+    "server",
+    "blockchain"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev": "concurrently \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
+    "test:contract": "npm test --workspace blockchain",
+    "build:client": "npm run build --workspace client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
