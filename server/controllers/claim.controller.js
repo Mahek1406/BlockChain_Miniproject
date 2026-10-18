@@ -97,8 +97,16 @@ export async function verifyClaim(req, res, next) {
   try {
     const claim = await Claim.findOne(visibleClaimFilter(req, req.params.id));
     if (!claim) return res.status(404).json({ success: false, message: "Claim not found" });
-    const verified = await verifyClaimOnChain(claim.claimId, claim.claimDataHash);
-    return res.json({ success: true, verified, databaseHash: claim.claimDataHash, blockchainHash: claim.claimDataHash, transactionHash: claim.transactionHash, blockNumber: claim.blockNumber });
+    const verification = await verifyClaimOnChain(claim.claimId, claim.claimDataHash);
+    const statusNames = ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"];
+    return res.json({
+      success: true,
+      ...verification,
+      blockchainStatus: statusNames[verification.blockchainStatus] || "UNKNOWN",
+      databaseHash: claim.claimDataHash,
+      transactionHash: claim.transactionHash,
+      blockNumber: claim.blockNumber
+    });
   } catch (error) { return next(error); }
 }
 

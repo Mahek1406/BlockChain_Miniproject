@@ -26,7 +26,7 @@ export async function recordClaimOnChain(claim) {
   try {
     const transaction = await getContract().createClaim(claim.claimId, claim.policyId, claim.claimDataHash, claim.userId.toString(), BigInt(Math.round(claim.amount)));
     const receipt = await transaction.wait();
-    return { transactionHash: receipt.hash, blockNumber: receipt.blockNumber };
+    return { transactionHash: transaction.hash, blockNumber: receipt.blockNumber };
   } catch (error) {
     if (error.statusCode) throw error;
     const unavailable = new Error("Blockchain is unavailable. Start the local Hardhat node and ensure the deployed contract address and private key are correct.");
@@ -41,14 +41,29 @@ export async function updateClaimOnChain(claimId, status, action) {
   if (statusValue === undefined) throw new Error("Unsupported blockchain claim status");
   const transaction = await getContract().updateClaimStatus(claimId, statusValue, action);
   const receipt = await transaction.wait();
-  return { transactionHash: receipt.hash, blockNumber: receipt.blockNumber };
+  return { transactionHash: transaction.hash, blockNumber: receipt.blockNumber };
 }
 
 export async function verifyClaimOnChain(claimId, claimDataHash) {
-  return getContract().verifyClaimHash(claimId, claimDataHash);
+  const contract = getContract();
+  const [verified, claim] = await Promise.all([
+    contract.verifyClaimHash(claimId, claimDataHash),
+    contract.getClaim(claimId)
+  ]);
+  return {
+    verified,
+    blockchainHash: claim.claimDataHash,
+    blockchainStatus: Number(claim.status),
+    blockchainUpdatedAt: Number(claim.updatedAt)
+  };
 }
 
 export async function getTransactionDetails(transactionHash) {
+  if (!process.env.BLOCKCHAIN_RPC_URL) {
+    const error = new Error("Blockchain RPC URL is not configured");
+    error.statusCode = 503;
+    throw error;
+  }
   const provider = new ethers.JsonRpcProvider(process.env.BLOCKCHAIN_RPC_URL);
   const transaction = await provider.getTransaction(transactionHash);
   const receipt = await provider.getTransactionReceipt(transactionHash);

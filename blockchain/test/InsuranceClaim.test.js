@@ -92,6 +92,32 @@ describe("InsuranceClaim", function () {
     expect((await contract.getClaim(claimId)).status).to.equal(2n);
   });
 
+  it("rejects duplicates, invalid inputs, and invalid status transitions", async function () {
+    const { contract, admin } = await deployFixture();
+    const claimHash = ethers.keccak256(ethers.toUtf8Bytes("claim-data"));
+
+    await expect(
+      contract.connect(admin).createClaim("", "POL-001", claimHash, "policyholder-001", 1)
+    ).to.be.revertedWith("Claim ID is required");
+    await expect(
+      contract.connect(admin).createClaim("CLM-001", "POL-001", ethers.ZeroHash, "policyholder-001", 1)
+    ).to.be.revertedWith("Claim hash is required");
+
+    await createTestClaim(contract, admin);
+    await expect(
+      contract.connect(admin).createClaim("CLM-001", "POL-001", claimHash, "policyholder-001", 1)
+    ).to.be.revertedWith("Claim already exists");
+    await expect(
+      contract.connect(admin).updateClaimStatus("CLM-001", 2, "CLAIM_APPROVED")
+    ).to.be.revertedWith("Invalid status transition");
+
+    await contract.connect(admin).updateClaimStatus("CLM-001", 1, "CLAIM_UNDER_REVIEW");
+    await contract.connect(admin).updateClaimStatus("CLM-001", 2, "CLAIM_APPROVED");
+    await expect(
+      contract.connect(admin).updateClaimStatus("CLM-001", 3, "CLAIM_REJECTED")
+    ).to.be.revertedWith("Invalid status transition");
+  });
+
   it("returns the complete claim history", async function () {
     const { contract, admin } = await deployFixture();
     const { claimId } = await createTestClaim(contract, admin);

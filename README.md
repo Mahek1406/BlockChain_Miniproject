@@ -159,15 +159,55 @@ flowchart TD
   I --> J
 ```
 
+## Requirement compliance checklist
+
+| College requirement | Evidence in this repository |
+|---|---|
+| Real-world problem and objectives | Abstract, problem context, objectives, benefits, and limitations above |
+| Architecture and workflow | Mermaid architecture and lifecycle diagrams; [PRESENTATION.md](./PRESENTATION.md) has the sequence diagram |
+| Working Ethereum prototype | `blockchain/contracts/InsuranceClaim.sol`, Hardhat configuration, deployment script, and ethers.js service |
+| Transaction demonstration | Claim creation/status APIs persist transaction hash and block number; verification reads the deployed contract |
+| Submission preparation | Test suite, security notes, setup commands, checklist, and slide-ready [PRESENTATION.md](./PRESENTATION.md) |
+
+### Access-control and status rules
+
+The API requires a JWT for all claim operations and checks the authenticated MongoDB role for administrator review. The contract independently authorizes the operator wallet and permits only `PENDING -> UNDER_REVIEW -> APPROVED` or `PENDING -> UNDER_REVIEW -> REJECTED`. Duplicate claim IDs, empty identifiers, zero hashes, missing actions, unauthorized writers, and terminal-state changes revert on-chain.
+
+### Transaction evidence
+
+`POST /api/claims` waits for the `ClaimCreated` transaction receipt before returning. `PUT /api/claims/:id/status` does the same for `ClaimStatusUpdated`. Both responses contain the claim’s `transactionHash` and `blockNumber`. `GET /api/claims/:id/verify` reads the on-chain claim and returns separate `databaseHash`, `blockchainHash`, and `blockchainStatus` values; it does not treat the database value as proof of the blockchain value.
+
+### Audit status
+
+- **Working:** Solidity compilation/tests, local deployment script, ethers.js writes/reads, JWT role checks, MongoDB persistence, encrypted uploads, client production build.
+- **Partially demonstrated:** live API-to-chain integration requires MongoDB, a running Hardhat node, a deployment, and private local environment values.
+- **Not production-ready:** local development key custody, local chain persistence, simulated payments, and unverified external uploads.
+- **Baseline validation note:** the current server test harness may fail before tests run if an existing MongoDB connection is active; this is reported rather than presented as a passing integration result.
+
 ## Testing
 
 ```powershell
 Set-Location -LiteralPath 'C:\Users\MAHEK PAHUJA\Desktop\BlockChain Insurance Claim\insurance-blockchain'
 npm test --workspace blockchain
+npm test --workspace server
 npm run build --workspace client
 ```
 
-The contract tests cover deployment, events, claim creation, retrieval, authorization, status changes, history, and hash verification.
+The contract tests cover deployment, events, claim creation, duplicate prevention, invalid inputs, authorization, valid and invalid status transitions, history, and hash verification. The server suite covers authentication, role protection, request validation, documents, simulated payments, and policy flows.
+
+## Live demonstration script
+
+1. Start MongoDB: `mongod --dbpath C:\data\db` (or start the MongoDB Windows service).
+2. In terminal 1, run `Set-Location -LiteralPath 'C:\Users\MAHEK PAHUJA\Desktop\BlockChain Insurance Claim\insurance-blockchain\blockchain'; npm run node`.
+3. Copy one printed Hardhat private key into `server\.env` as `BLOCKCHAIN_PRIVATE_KEY`.
+4. In terminal 2, compile and deploy: `Set-Location -LiteralPath 'C:\Users\MAHEK PAHUJA\Desktop\BlockChain Insurance Claim\insurance-blockchain\blockchain'; npm run compile; npm run deploy`.
+5. Copy the deployment address printed by the script into `server\.env` as `CONTRACT_ADDRESS`.
+6. Set `MONGODB_URI`, a local `JWT_SECRET`, `BLOCKCHAIN_RPC_URL`, and `APP_ORIGIN` in `server\.env`; keep placeholders out of shared files.
+7. In terminal 3, run `Set-Location -LiteralPath 'C:\Users\MAHEK PAHUJA\Desktop\BlockChain Insurance Claim\insurance-blockchain'; npm run start --workspace server`.
+8. In terminal 4, run `Set-Location -LiteralPath 'C:\Users\MAHEK PAHUJA\Desktop\BlockChain Insurance Claim\insurance-blockchain'; npm run dev --workspace client`.
+9. Register a policyholder, provision or purchase an active policy, submit a claim, and capture the returned transaction hash/block.
+10. Sign in with configured administrator credentials, move the claim to review, approve or reject it, and capture the second transaction.
+11. Open verification and confirm the displayed database hash and blockchain hash match, then use `/api/blockchain/transaction/:hash` to show receipt status.
 
 ## Limitations and future scope
 

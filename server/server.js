@@ -59,7 +59,7 @@ async function start() {
   });
 }
 
-if (process.env.NODE_ENV !== "test") {
+if (process.env.NODE_ENV !== "test" && !process.argv.includes("--test")) {
   start().catch((error) => {
     console.error("Unable to start API server:", error.message);
     process.exitCode = 1;

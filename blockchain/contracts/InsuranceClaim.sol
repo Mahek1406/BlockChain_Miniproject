@@ -117,12 +117,12 @@ contract InsuranceClaim {
         ClaimStatus newStatus,
         string calldata action
     ) external onlyAuthorizedAdmin existingClaim(claimId) {
-        require(
-            newStatus == ClaimStatus.UNDER_REVIEW ||
-                newStatus == ClaimStatus.APPROVED ||
-                newStatus == ClaimStatus.REJECTED,
-            "Invalid status transition"
-        );
+        ClaimStatus currentStatus = claims[claimId].status;
+        bool validTransition =
+            (currentStatus == ClaimStatus.PENDING && newStatus == ClaimStatus.UNDER_REVIEW) ||
+            (currentStatus == ClaimStatus.UNDER_REVIEW &&
+                (newStatus == ClaimStatus.APPROVED || newStatus == ClaimStatus.REJECTED));
+        require(validTransition, "Invalid status transition");
         require(bytes(action).length > 0, "Action is required");
 
         uint256 timestamp = block.timestamp;

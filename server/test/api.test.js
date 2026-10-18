@@ -16,6 +16,7 @@ let userToken;
 let userId;
 
 before(async () => {
+  process.env.DOCUMENT_ENCRYPTION_KEY = "test-only-document-encryption-key";
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
   const admin = await User.create({ name: "Test Admin", email: "admin@test.local", passwordHash: await bcrypt.hash("AdminPassword123!", 4), role: "ADMIN" });
