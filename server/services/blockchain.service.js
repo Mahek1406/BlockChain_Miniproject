@@ -39,7 +39,18 @@ export async function recordClaimOnChain(claim) {
 export async function updateClaimOnChain(claimId, status, action) {
   const statusValue = { UNDER_REVIEW: 1, APPROVED: 2, REJECTED: 3 }[status];
   if (statusValue === undefined) throw new Error("Unsupported blockchain claim status");
-  const transaction = await getContract().updateClaimStatus(claimId, statusValue, action);
+  const contract = getContract();
+  try {
+    await contract.getClaim(claimId);
+  } catch (error) {
+    const missing = new Error(
+      `Claim ${claimId} is not present in the currently deployed contract. Restarting Hardhat clears on-chain claims; redeploy the contract and submit this claim again.`
+    );
+    missing.statusCode = 409;
+    missing.cause = error;
+    throw missing;
+  }
+  const transaction = await contract.updateClaimStatus(claimId, statusValue, action);
   const receipt = await transaction.wait();
   return { transactionHash: transaction.hash, blockNumber: receipt.blockNumber };
 }

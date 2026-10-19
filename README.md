@@ -90,6 +90,8 @@ Copy the deployment address into `CONTRACT_ADDRESS`.
 
 Keep the Hardhat node terminal running while using claims. If the node is stopped, or if `BLOCKCHAIN_PRIVATE_KEY` or `CONTRACT_ADDRESS` still contains a placeholder, claim submission will be rejected with a clear blockchain setup message.
 
+> **Important:** Hardhat's local chain is temporary. Restarting `npm run node` creates a new empty blockchain, while MongoDB may still contain claims from the previous chain. Those stale claims cannot be approved or rejected because they do not exist in the new contract deployment. Run `npm run compile` and `npm run deploy`, update `CONTRACT_ADDRESS`, restart the server, and submit the claim again. The API reports this condition as a `409` error instead of sending an opaque `Claim does not exist` contract revert.
+
 ### Accounts and data
 
 No demo credentials or seed records are included. Register a policyholder account through the application. Administrator accounts must be provisioned through a secure operator workflow; never commit credentials to source control.
